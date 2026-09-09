@@ -9,14 +9,16 @@ export type BrawnUser = {
   role?: string;
   staffId?: string;
   memberId?: string;
+  memberNumber?: string;
   gymId?: string;
   gymSlug?: string;
+  gymName?: string;
   permissions?: string[];
 };
 
 export type LoginInput = {
+  gymId: string;
   username: string;
   password: string;
   remember?: boolean;
-  gymSlug?: string;
 };
