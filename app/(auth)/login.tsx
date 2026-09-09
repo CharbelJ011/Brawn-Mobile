@@ -22,13 +22,26 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    console.log('[Brawn Login] login screen mounted');
+    console.log('[Brawn Login] loading gyms from /mobile-auth/gyms');
+
     apiRequest<GymOption[]>('/mobile-auth/gyms')
       .then((items) => {
+        console.log('[Brawn Login] gyms loaded:', items.map((item) => ({ id: item.id, name: item.name, slug: item.slug })));
         setGyms(items);
-        if (items.length === 1) setGym(items[0]);
+        if (items.length === 1) {
+          console.log('[Brawn Login] one gym found, auto-selecting:', items[0].name);
+          setGym(items[0]);
+        }
       })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Unable to load gyms.'))
-      .finally(() => setLoadingGyms(false));
+      .catch((caught) => {
+        console.error('[Brawn Login] gym request failed:', caught);
+        setError(caught instanceof Error ? caught.message : 'Unable to load gyms.');
+      })
+      .finally(() => {
+        console.log('[Brawn Login] gym loading finished');
+        setLoadingGyms(false);
+      });
   }, []);
 
   async function submit() {
@@ -36,10 +49,13 @@ export default function LoginScreen() {
     if (!username.trim() || !password) return;
     setSubmitting(true);
     setError('');
+    console.log('[Brawn Login] sign-in attempt:', { gymId: gym.id, gymName: gym.name, username: username.trim() });
     try {
       const user = await signIn({ gymId: gym.id, username: username.trim(), password, remember: true });
+      console.log('[Brawn Login] sign-in success:', { memberId: user.memberId, gymId: user.gymId, userType: user.userType });
       router.replace(user.userType === 'MEMBER' || user.memberId ? '/(member)' : '/(trainer)');
     } catch (caught) {
+      console.error('[Brawn Login] sign-in failed:', caught);
       setError(caught instanceof Error ? caught.message : 'Unable to sign in.');
     } finally {
       setSubmitting(false);
