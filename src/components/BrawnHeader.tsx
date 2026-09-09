@@ -8,7 +8,7 @@ import { colors } from '@/theme/colors';
 export function BrawnHeader({ label }: { label?: string }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const showSignOut = label === 'MEMBER' && pathname.includes('profile');
+  const showSignOut = (label === 'MEMBER' || label === 'TRAINER') && pathname.includes('profile');
 
   function confirmSignOut() {
     Alert.alert('Sign out', 'Are you sure you want to sign out of Brawn?', [
