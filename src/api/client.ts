@@ -17,6 +17,10 @@ function looksLikeCanceledFetch(error: unknown, controller: AbortController) {
   return error.name === 'AbortError' || /FetchRequestCanceledException|canceled|cancelled/i.test(error.message);
 }
 
+function isExpectedClientResponse(error: unknown) {
+  return error instanceof ApiError && (error.status === 400 || error.status === 401 || error.status === 403 || error.status === 404 || error.status === 409 || error.status === 422);
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${API_URL}${normalizedPath}`;
@@ -79,6 +83,16 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   } catch (error) {
     const elapsedMs = Date.now() - startedAt;
     const canceled = looksLikeCanceledFetch(error, controller);
+
+    if (isExpectedClientResponse(error)) {
+      console.warn(`[Brawn API] ${method} ${url} rejected with expected client response`, {
+        status: error.status,
+        message: error.message,
+        elapsedMs,
+      });
+      throw error;
+    }
+
     console.error(`[Brawn API] !! ${method} ${url} failed after ${elapsedMs}ms`, {
       name: error instanceof Error ? error.name : typeof error,
       message: error instanceof Error ? error.message : String(error),
