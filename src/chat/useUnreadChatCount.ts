@@ -2,17 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { apiRequest } from '@/api/client';
 
-type ConversationUnread = { unreadCount?: number };
+type UnreadResponse = { count?: number };
 
 export function useUnreadChatCount() {
   const [count, setCount] = useState(0);
 
   const refresh = useCallback(async () => {
     try {
-      const conversations = await apiRequest<ConversationUnread[]>('/mobile-auth/chat/conversations');
-      setCount(conversations.reduce((total, conversation) => total + Math.max(0, Number(conversation.unreadCount) || 0), 0));
-    } catch {
-      // A tab badge must never interrupt navigation if chat is temporarily unavailable.
+      const result = await apiRequest<UnreadResponse>('/mobile-auth/chat/unread-count');
+      setCount(Math.max(0, Number(result?.count) || 0));
+    } catch (error) {
+      console.warn('[Brawn Chat] unable to refresh unread count', error instanceof Error ? error.message : String(error));
     }
   }, []);
 
