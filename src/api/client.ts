@@ -1,6 +1,9 @@
+import * as SecureStore from 'expo-secure-store';
+
 const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:3001';
 const API_URL = RAW_API_URL.replace(/\/$/, '');
 const REQUEST_TIMEOUT_MS = 15000;
+const TOKEN_KEY = 'brawn.mobile.access-token';
 
 console.log('[Brawn API] configured base URL:', API_URL);
 console.log('[Brawn API] EXPO_PUBLIC_API_URL present:', Boolean(process.env.EXPO_PUBLIC_API_URL));
@@ -33,9 +36,13 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }, REQUEST_TIMEOUT_MS);
 
   const hasBody = init?.body != null;
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
   const headers: Record<string, string> = {
     ...((init?.headers ?? {}) as Record<string, string>),
   };
+  if (token && !Object.keys(headers).some((key) => key.toLowerCase() === 'authorization')) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   if (hasBody && !Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) {
     headers['Content-Type'] = 'application/json';
   }
@@ -46,7 +53,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     hasBody,
     timeoutMs: REQUEST_TIMEOUT_MS,
     credentials: 'omit',
-    headers,
+    hasAuthorization: Boolean(headers.Authorization),
   });
 
   try {
@@ -72,7 +79,6 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     }
 
     console.log(`[Brawn API] <- ${response.status} ${method} ${url} (${elapsedMs}ms)`);
-    console.log('[Brawn API] response body:', body);
 
     if (!response.ok) {
       const message = Array.isArray(body?.message) ? body.message[0] : body?.message;
