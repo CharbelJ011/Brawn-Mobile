@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Screen } from '@/components/Screen';
 import { BrandMark } from '@/components/BrandMark';
 import { useAuth } from '@/auth/AuthProvider';
-import { apiRequest } from '@/api/client';
+import { ApiError, apiRequest } from '@/api/client';
 import { colors } from '@/theme/colors';
 import { radii, spacing } from '@/theme/spacing';
 
@@ -35,7 +35,11 @@ export default function LoginScreen() {
         }
       })
       .catch((caught) => {
-        console.error('[Brawn Login] gym request failed:', caught);
+        if (caught instanceof ApiError && caught.status && caught.status < 500) {
+          console.warn('[Brawn Login] gym request rejected:', { status: caught.status, message: caught.message });
+        } else {
+          console.error('[Brawn Login] gym request failed:', caught);
+        }
         setError(caught instanceof Error ? caught.message : 'Unable to load gyms.');
       })
       .finally(() => {
@@ -55,7 +59,13 @@ export default function LoginScreen() {
       console.log('[Brawn Login] sign-in success:', { memberId: user.memberId, gymId: user.gymId, userType: user.userType });
       router.replace(user.userType === 'MEMBER' || user.memberId ? '/(member)' : '/(trainer)');
     } catch (caught) {
-      console.error('[Brawn Login] sign-in failed:', caught);
+      if (caught instanceof ApiError && (caught.status === 401 || caught.status === 403)) {
+        console.log('[Brawn Login] credentials rejected for selected gym');
+      } else if (caught instanceof ApiError && caught.status && caught.status < 500) {
+        console.warn('[Brawn Login] sign-in rejected:', { status: caught.status, message: caught.message });
+      } else {
+        console.error('[Brawn Login] sign-in failed:', caught);
+      }
       setError(caught instanceof Error ? caught.message : 'Unable to sign in.');
     } finally {
       setSubmitting(false);
