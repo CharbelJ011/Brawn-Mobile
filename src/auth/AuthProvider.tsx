@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
-import { apiRequest } from '@/api/client';
+import { ApiError, apiRequest } from '@/api/client';
 import type { BrawnUser, LoginInput } from '@/types/auth';
 
 const SESSION_KEY = 'brawn.mobile.session';
@@ -15,10 +15,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-type LoginResponse = {
-  accessToken?: string;
-  user: BrawnUser;
-};
+type LoginResponse = { accessToken?: string; user: BrawnUser };
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<BrawnUser | null>(null);
@@ -26,9 +23,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     SecureStore.getItemAsync(SESSION_KEY)
-      .then((value) => {
-        if (value) setUser(JSON.parse(value));
-      })
+      .then((value) => { if (value) setUser(JSON.parse(value)); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -36,10 +31,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     user,
     loading,
     async signIn(input) {
-      const result = await apiRequest<LoginResponse>('/mobile-auth/member/login', {
-        method: 'POST',
-        body: JSON.stringify(input),
-      });
+      let result: LoginResponse;
+      try {
+        result = await apiRequest<LoginResponse>('/mobile-auth/member/login', {
+          method: 'POST', body: JSON.stringify(input),
+        });
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 401) throw error;
+        result = await apiRequest<LoginResponse>('/mobile-auth/staff/login', {
+          method: 'POST', body: JSON.stringify(input),
+        });
+      }
       const nextUser = result.user;
       setUser(nextUser);
       await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(nextUser));
