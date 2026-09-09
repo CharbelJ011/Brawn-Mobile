@@ -11,33 +11,52 @@ export class ApiError extends Error {
   }
 }
 
+function looksLikeCanceledFetch(error: unknown, controller: AbortController) {
+  if (controller.signal.aborted) return true;
+  if (!(error instanceof Error)) return false;
+  return error.name === 'AbortError' || /FetchRequestCanceledException|canceled|cancelled/i.test(error.message);
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${API_URL}${normalizedPath}`;
-  const method = init?.method ?? 'GET';
+  const method = (init?.method ?? 'GET').toUpperCase();
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => {
+    console.warn(`[Brawn API] timeout reached for ${method} ${url}; aborting native request`);
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+
+  const hasBody = init?.body != null;
+  const headers: Record<string, string> = {
+    ...((init?.headers ?? {}) as Record<string, string>),
+  };
+  if (hasBody && !Object.keys(headers).some((key) => key.toLowerCase() === 'content-type')) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   console.log(`[Brawn API] -> ${method} ${url}`);
   console.log('[Brawn API] request details:', {
     method,
-    hasBody: Boolean(init?.body),
+    hasBody,
     timeoutMs: REQUEST_TIMEOUT_MS,
+    credentials: 'omit',
+    headers,
   });
 
   try {
     const response = await fetch(url, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers ?? {}),
-      },
-      credentials: 'include',
+      method,
+      headers,
+      credentials: 'omit',
       signal: controller.signal,
     });
 
     const elapsedMs = Date.now() - startedAt;
+    console.log(`[Brawn API] native response received after ${elapsedMs}ms`);
+
     const rawBody = await response.text();
     let body: any = null;
     if (rawBody) {
@@ -59,15 +78,16 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     return body as T;
   } catch (error) {
     const elapsedMs = Date.now() - startedAt;
-    const isAbort = error instanceof Error && error.name === 'AbortError';
+    const canceled = looksLikeCanceledFetch(error, controller);
     console.error(`[Brawn API] !! ${method} ${url} failed after ${elapsedMs}ms`, {
       name: error instanceof Error ? error.name : typeof error,
       message: error instanceof Error ? error.message : String(error),
-      aborted: isAbort,
+      controllerAborted: controller.signal.aborted,
+      classifiedAsCanceled: canceled,
       apiUrl: API_URL,
     });
 
-    if (isAbort) {
+    if (canceled) {
       throw new ApiError(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s while connecting to ${API_URL}.`);
     }
     throw error;
