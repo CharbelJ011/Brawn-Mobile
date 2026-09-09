@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { apiRequest } from '@/api/client';
-import { useAuth } from '@/auth/AuthProvider';
 import { colors } from '@/theme/colors';
 import { radii } from '@/theme/spacing';
 
 export function ProfileAccountActions() {
-  const { signOut } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -44,42 +41,23 @@ export function ProfileAccountActions() {
     }
   }
 
-  function confirmSignOut() {
-    Alert.alert('Sign out', 'Sign out of Brawn Mobile on this device?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: () => {
-          void signOut().then(() => router.replace('/(auth)/login'));
-        },
-      },
-    ]);
-  }
-
   return (
-    <>
-      <View style={styles.card}>
-        <Text style={styles.eyebrow}>ACCOUNT SECURITY</Text>
-        <Text style={styles.title}>Change mobile password</Text>
-        <Text style={styles.hint}>This changes only your Brawn Mobile password. Your gym ERP login is not affected.</Text>
-        <Text style={styles.label}>Current password</Text>
-        <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Current password" placeholderTextColor={colors.mutedDark} />
-        <Text style={styles.label}>New password</Text>
-        <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Minimum 8 characters" placeholderTextColor={colors.mutedDark} />
-        <Text style={styles.label}>Confirm new password</Text>
-        <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Repeat new password" placeholderTextColor={colors.mutedDark} />
-        {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
-        {passwordSuccess ? <Text style={styles.success}>{passwordSuccess}</Text> : null}
-        <Pressable onPress={changePassword} disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword} style={[styles.changeButton, (savingPassword || !currentPassword || !newPassword || !confirmPassword) && styles.disabled]}>
-          {savingPassword ? <ActivityIndicator color="#fff" /> : <Text style={styles.changeText}>CHANGE PASSWORD</Text>}
-        </Pressable>
-      </View>
-
-      <Pressable onPress={confirmSignOut} style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}>
-        <Text style={styles.signOutText}>SIGN OUT</Text>
+    <View style={styles.card}>
+      <Text style={styles.eyebrow}>ACCOUNT SECURITY</Text>
+      <Text style={styles.title}>Change mobile password</Text>
+      <Text style={styles.hint}>This changes only your Brawn Mobile password. Your gym ERP login is not affected.</Text>
+      <Text style={styles.label}>Current password</Text>
+      <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Current password" placeholderTextColor={colors.mutedDark} />
+      <Text style={styles.label}>New password</Text>
+      <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Minimum 8 characters" placeholderTextColor={colors.mutedDark} />
+      <Text style={styles.label}>Confirm new password</Text>
+      <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} placeholder="Repeat new password" placeholderTextColor={colors.mutedDark} />
+      {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
+      {passwordSuccess ? <Text style={styles.success}>{passwordSuccess}</Text> : null}
+      <Pressable onPress={changePassword} disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword} style={[styles.changeButton, (savingPassword || !currentPassword || !newPassword || !confirmPassword) && styles.disabled]}>
+        {savingPassword ? <ActivityIndicator color="#fff" /> : <Text style={styles.changeText}>CHANGE PASSWORD</Text>}
       </Pressable>
-    </>
+    </View>
   );
 }
 
@@ -95,7 +73,4 @@ const styles = StyleSheet.create({
   changeButton: { height: 50, marginTop: 14, borderRadius: radii.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   changeText: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 },
   disabled: { opacity: .45 },
-  signOutButton: { height: 52, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,89,89,.38)', backgroundColor: 'rgba(255,89,89,.06)', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  signOutText: { color: '#ff7770', fontSize: 11, fontWeight: '900', letterSpacing: 1.6 },
-  pressed: { opacity: .75 },
 });
