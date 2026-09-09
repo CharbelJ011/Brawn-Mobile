@@ -4,6 +4,7 @@ import { apiRequest } from '@/api/client';
 import type { BrawnUser, LoginInput } from '@/types/auth';
 
 const SESSION_KEY = 'brawn.mobile.session';
+const TOKEN_KEY = 'brawn.mobile.access-token';
 
 type AuthContextValue = {
   user: BrawnUser | null;
@@ -14,9 +15,10 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function normalizeUser(payload: any): BrawnUser {
-  return payload?.user ?? payload;
-}
+type LoginResponse = {
+  accessToken?: string;
+  user: BrawnUser;
+};
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<BrawnUser | null>(null);
@@ -34,23 +36,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
     user,
     loading,
     async signIn(input) {
-      const result = await apiRequest<any>('/auth/login', {
+      const result = await apiRequest<LoginResponse>('/mobile-auth/member/login', {
         method: 'POST',
         body: JSON.stringify(input),
       });
-      const nextUser = normalizeUser(result);
+      const nextUser = result.user;
       setUser(nextUser);
       await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(nextUser));
+      if (result.accessToken) await SecureStore.setItemAsync(TOKEN_KEY, result.accessToken);
       return nextUser;
     },
     async signOut() {
-      try {
-        await apiRequest('/auth/logout', { method: 'POST' });
-      } catch {
-        // Local sign-out must still succeed if the API is unreachable.
-      }
       setUser(null);
-      await SecureStore.deleteItemAsync(SESSION_KEY);
+      await Promise.all([
+        SecureStore.deleteItemAsync(SESSION_KEY),
+        SecureStore.deleteItemAsync(TOKEN_KEY),
+      ]);
     },
   }), [user, loading]);
 
