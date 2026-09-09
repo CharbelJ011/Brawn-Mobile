@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
-import { ApiError, apiRequest } from '@/api/client';
+import { apiRequest } from '@/api/client';
 import type { BrawnUser, LoginInput } from '@/types/auth';
 
 const SESSION_KEY = 'brawn.mobile.session';
@@ -31,17 +31,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     user,
     loading,
     async signIn(input) {
-      let result: LoginResponse;
-      try {
-        result = await apiRequest<LoginResponse>('/mobile-auth/member/login', {
-          method: 'POST', body: JSON.stringify(input),
-        });
-      } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 401) throw error;
-        result = await apiRequest<LoginResponse>('/mobile-auth/staff/login', {
-          method: 'POST', body: JSON.stringify(input),
-        });
-      }
+      const result = await apiRequest<LoginResponse>('/mobile-auth/login', {
+        method: 'POST', body: JSON.stringify(input),
+      });
       const nextUser = result.user;
       setUser(nextUser);
       await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(nextUser));
