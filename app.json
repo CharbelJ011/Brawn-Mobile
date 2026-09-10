@@ -10,10 +10,25 @@
     "plugins": ["expo-router", "expo-secure-store"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.brawn.mobile"
+      "bundleIdentifier": "com.brawn.mobile",
+      "associatedDomains": ["applinks:brawnapp.com"]
     },
     "android": {
-      "package": "com.brawn.mobile"
+      "package": "com.brawn.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "brawnapp.com",
+              "pathPrefix": "/checkin/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "experiments": {
       "typedRoutes": true
