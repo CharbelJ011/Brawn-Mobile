@@ -21,14 +21,13 @@ type NfcCheckinResult = {
   validation?: { decision?: string; code?: string | null; message?: string | null } | null;
 };
 
-type State = 'idle' | 'checking' | 'success' | 'error';
+type State = 'idle' | 'checking' | 'error';
 
 export default function NfcCheckinScreen() {
   const params = useLocalSearchParams<{ token?: string | string[] }>();
   const { user, loading } = useAuth();
   const token = Array.isArray(params.token) ? params.token[0] : params.token;
   const [state, setState] = useState<State>('idle');
-  const [result, setResult] = useState<NfcCheckinResult | null>(null);
   const [error, setError] = useState('');
   const attempted = useRef(false);
 
@@ -43,9 +42,11 @@ export default function NfcCheckinScreen() {
     apiRequest<NfcCheckinResult>(`/mobile-auth/member/check-in/nfc/${encodeURIComponent(token)}`, {
       method: 'POST',
     })
-      .then((payload) => {
-        setResult(payload);
-        setState('success');
+      .then(() => {
+        // The NFC interaction itself is the check-in action. There is no
+        // second confirmation screen: once the API records attendance we
+        // return to Home, whose focus effect reloads live occupancy immediately.
+        router.replace('/(member)');
       })
       .catch((caught) => {
         setError(caught instanceof Error ? caught.message : 'Unable to check in with this NFC tag.');
@@ -57,7 +58,6 @@ export default function NfcCheckinScreen() {
     attempted.current = false;
     setState('idle');
     setError('');
-    setResult(null);
   }
 
   if (loading) {
@@ -99,18 +99,7 @@ export default function NfcCheckinScreen() {
       <Text style={styles.kicker}>BRAWN NFC</Text>
       <Text style={styles.title}>Checking you in…</Text>
       <ActivityIndicator style={styles.spinner} color={colors.accent} />
-      <Text style={styles.muted}>Validating your membership and gym location.</Text>
-    </View></Screen>;
-  }
-
-  if (state === 'success' && result) {
-    return <Screen><View style={styles.center}>
-      <View style={styles.successCircle}><Ionicons name="checkmark" size={48} color="#07140d" /></View>
-      <Text style={styles.kicker}>CHECK-IN COMPLETE</Text>
-      <Text style={styles.title}>{result.alreadyCheckedIn ? 'Already checked in' : 'Welcome in'}</Text>
-      <Text style={styles.location}>{result.locationName ?? result.gymName ?? 'Brawn gym'}</Text>
-      <Text style={styles.muted}>{result.message ?? result.validation?.message ?? 'Your attendance has been recorded in Brawn ERP.'}</Text>
-      <Pressable style={styles.primary} onPress={() => router.replace('/(member)')}><Text style={styles.primaryText}>GO TO HOME</Text></Pressable>
+      <Text style={styles.muted}>No confirmation needed. Brawn is recording your attendance automatically.</Text>
     </View></Screen>;
   }
 
@@ -128,11 +117,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   kicker: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 2.1, marginTop: 18 },
   title: { color: colors.foregroundStrong, fontSize: 29, fontWeight: '900', letterSpacing: -1, textAlign: 'center', marginTop: 7 },
-  location: { color: colors.foreground, fontSize: 16, fontWeight: '800', textAlign: 'center', marginTop: 10 },
   muted: { maxWidth: 330, color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 10 },
   spinner: { marginTop: 20 },
   iconCircle: { width: 74, height: 74, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,59,59,.3)', backgroundColor: 'rgba(255,59,59,.07)', alignItems: 'center', justifyContent: 'center' },
-  successCircle: { width: 78, height: 78, borderRadius: 26, backgroundColor: '#55d98c', alignItems: 'center', justifyContent: 'center' },
   errorCircle: { width: 78, height: 78, borderRadius: 26, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
   primary: { minWidth: 210, height: 52, marginTop: 24, paddingHorizontal: 24, borderRadius: radii.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1.6 },
